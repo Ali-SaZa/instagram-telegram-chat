@@ -107,6 +107,10 @@ class UserSession:
         """Get a user preference."""
         return self.preferences.get(key, default)
     
+    def get_preferences(self) -> Dict[str, Any]:
+        """Get all user preferences."""
+        return self.preferences.copy()
+    
     def can_execute_command(self) -> bool:
         """
         Check if the user can execute a command (rate limiting).
@@ -141,7 +145,9 @@ class UserSession:
             return {
                 'commands_used': 0,
                 'commands_remaining': self.max_commands_per_window,
-                'window_resets_in': 0
+                'max_commands': self.max_commands_per_window,
+                'window_resets_in': 0,
+                'wait_time': 0
             }
         
         now = datetime.now()
@@ -151,7 +157,9 @@ class UserSession:
         return {
             'commands_used': self.command_count,
             'commands_remaining': max(0, self.max_commands_per_window - self.command_count),
-            'window_resets_in': int(window_resets_in)
+            'max_commands': self.max_commands_per_window,
+            'window_resets_in': int(window_resets_in),
+            'wait_time': int(window_resets_in)
         }
     
     def reset_rate_limit(self):

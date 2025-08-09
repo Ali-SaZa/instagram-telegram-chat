@@ -12,7 +12,6 @@ pymongo>=4.0.0
 pydantic>=2.0.0
 
 # Async Support
-asyncio
 aiohttp>=3.8.0
 
 # Configuration & Environment

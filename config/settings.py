@@ -8,6 +8,10 @@ from typing import Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 
 class DatabaseSettings(BaseSettings):
     """Database connection settings."""
@@ -290,9 +294,17 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
+        extra = "ignore"
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        # Re-initialize nested settings with the current environment context
+        self.database = DatabaseSettings()
+        self.instagram = InstagramSettings()
+        self.telegram = TelegramSettings()
+        self.redis = RedisSettings()
+        self.logging = LoggingSettings()
+        self.security = SecuritySettings()
         self._create_directories()
     
     def _create_directories(self):

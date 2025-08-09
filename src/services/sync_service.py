@@ -9,8 +9,8 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 
-from ..instagram.client import InstagramClient
-from ..database.operations import InstagramOperations
+from instagram.client import InstagramClient
+from database.operations import InstagramOperations
 
 logger = logging.getLogger(__name__)
 
@@ -420,7 +420,71 @@ class SyncServiceManager:
             status[service_id] = await service.get_sync_status()
         return status
     
+    async def trigger_manual_sync(self) -> Dict[str, Any]:
+        """
+        Trigger manual sync on all services.
+        
+        Returns:
+            Combined sync results
+        """
+        if not self.services:
+            return {
+                "success": False,
+                "error": "No sync services available",
+                "new_messages": 0,
+                "new_threads": 0,
+                "sync_time": datetime.now().isoformat()
+            }
+        
+        total_new_messages = 0
+        total_new_threads = 0
+        all_successful = True
+        errors = []
+        
+        for service_id, service in self.services.items():
+            try:
+                result = await service.manual_sync()
+                if result.get('success'):
+                    # Extract stats from the result
+                    stats = result.get('stats', {})
+                    total_new_messages += stats.get('total_messages_synced', 0)
+                    total_new_threads += stats.get('total_threads_synced', 0)
+                else:
+                    all_successful = False
+                    errors.append(f"Service {service_id}: {result.get('error', 'Unknown error')}")
+            except Exception as e:
+                all_successful = False
+                errors.append(f"Service {service_id}: {str(e)}")
+        
+        return {
+            "success": all_successful,
+            "new_messages": total_new_messages,
+            "new_threads": total_new_threads,
+            "sync_time": datetime.now().isoformat(),
+            "error": "; ".join(errors) if errors else None
+        }
+    
     async def cleanup_all(self):
         """Cleanup all services."""
         for service_id in list(self.services.keys()):
-            await self.remove_service(service_id) 
+            await self.remove_service(service_id)
+
+
+# Global instances and factory functions
+_sync_service_manager = None
+
+
+async def get_sync_service() -> SyncServiceManager:
+    """Get the global sync service manager instance."""
+    global _sync_service_manager
+    if _sync_service_manager is None:
+        _sync_service_manager = SyncServiceManager()
+    return _sync_service_manager
+
+
+async def cleanup_sync_service():
+    """Cleanup the global sync service manager."""
+    global _sync_service_manager
+    if _sync_service_manager:
+        await _sync_service_manager.cleanup_all()
+        _sync_service_manager = None 

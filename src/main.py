@@ -17,8 +17,8 @@ from config.settings import get_settings
 from database.connection import initialize_database, cleanup_database, db_manager
 from services.sync_service import get_sync_service
 from services.webhook_handler import get_webhook_handler, handle_webhook_request
-from telegram.bot import setup_telegram_handlers
-from telegram.session import TelegramSessionManager
+from telegram_bot.bot import setup_telegram_handlers
+from telegram_bot.session import TelegramSessionManager
 
 # Configure logging
 logging.basicConfig(

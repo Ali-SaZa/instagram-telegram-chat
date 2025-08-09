@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: instagram_telegram_mongodb_noauth
+    restart: unless-stopped
+    ports:
+      - "27019:27017"
+    environment:
+      MONGO_INITDB_DATABASE: instagram_telegram_chat
+    volumes:
+      - mongodb_data_noauth:/data/db
+    command: mongod --bind_ip_all
+
+volumes:
+  mongodb_data_noauth:
+    driver: local 

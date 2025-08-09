@@ -61,6 +61,8 @@ class InstagramTelegramBot:
         self.app.add_handler(CommandHandler("status", self._status_command))
         self.app.add_handler(CommandHandler("threads", self._threads_command))
         self.app.add_handler(CommandHandler("search", self._search_command))
+        self.app.add_handler(CommandHandler("settings", self._settings_command))
+        self.app.add_handler(CommandHandler("sync", self._sync_command))
         
         # Conversation handler for viewing messages
         conv_handler = ConversationHandler(
@@ -224,6 +226,103 @@ class InstagramTelegramBot:
             "Type your search query now, or use /cancel to exit."
         )
         return SEARCHING
+    
+    async def _settings_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /settings command."""
+        try:
+            user = update.effective_user
+            user_id = user.id
+            
+            # Get or create user session
+            session = await self.session_manager.get_or_create_session(user_id)
+            
+            # Get current user preferences
+            preferences = session.get_preferences()
+            
+            settings_text = "⚙️ **User Settings**\n\n"
+            
+            if preferences:
+                settings_text += "**Current Preferences:**\n"
+                for key, value in preferences.items():
+                    settings_text += f"• {key}: {value}\n"
+            else:
+                settings_text += "No custom preferences set.\n"
+            
+            settings_text += "\n**Available Settings:**\n"
+            settings_text += "• Notification frequency\n"
+            settings_text += "• Language preference\n"
+            settings_text += "• Timezone\n"
+            settings_text += "• Privacy settings\n\n"
+            settings_text += "Settings configuration coming soon!"
+            
+            await update.message.reply_text(settings_text, parse_mode='Markdown')
+            
+        except Exception as e:
+            logger.error(f"Error in settings command: {e}")
+            await update.message.reply_text("Sorry, settings command failed. Please try again.")
+    
+    async def _sync_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /sync command."""
+        try:
+            user = update.effective_user
+            user_id = user.id
+            
+            # Get or create user session
+            session = await self.session_manager.get_or_create_session(user_id)
+            
+            # Check rate limiting
+            if not session.can_execute_command():
+                rate_limit_info = session.get_rate_limit_info()
+                await update.message.reply_text(
+                    f"⚠️ **Rate Limited**\n\n"
+                    f"You've made too many requests. Please wait {rate_limit_info['wait_time']} seconds.\n\n"
+                    f"Commands used: {rate_limit_info['commands_used']}/{rate_limit_info['max_commands']}",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            # Send initial response
+            status_message = await update.message.reply_text(
+                "🔄 **Manual Sync Started**\n\n"
+                "Syncing Instagram data... This may take a few moments."
+            )
+            
+            try:
+                # Import sync service
+                from ..services.sync_service import get_sync_service
+                sync_service = await get_sync_service()
+                
+                # Trigger manual sync
+                sync_result = await sync_service.trigger_manual_sync()
+                
+                if sync_result.get('success'):
+                    await status_message.edit_text(
+                        "✅ **Sync Completed Successfully**\n\n"
+                        f"• New messages: {sync_result.get('new_messages', 0)}\n"
+                        f"• New threads: {sync_result.get('new_threads', 0)}\n"
+                        f"• Sync time: {sync_result.get('sync_time', 'Unknown')}\n\n"
+                        "Use /threads to view updated data."
+                    )
+                else:
+                    await status_message.edit_text(
+                        "❌ **Sync Failed**\n\n"
+                        f"Error: {sync_result.get('error', 'Unknown error')}\n\n"
+                        "Please try again later or contact support."
+                    )
+                    
+            except Exception as sync_error:
+                logger.error(f"Sync error: {sync_error}")
+                await status_message.edit_text(
+                    "❌ **Sync Failed**\n\n"
+                    "An error occurred during sync. Please try again later."
+                )
+            
+            # Update session activity
+            session.update_activity()
+            
+        except Exception as e:
+            logger.error(f"Error in sync command: {e}")
+            await update.message.reply_text("Sorry, sync command failed. Please try again.")
     
     async def _thread_selected(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle thread selection from inline keyboard."""

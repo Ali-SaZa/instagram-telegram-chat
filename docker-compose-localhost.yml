@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: instagram_telegram_mongodb_localhost
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+      MONGO_INITDB_DATABASE: instagram_telegram_chat
+    volumes:
+      - mongodb_data:/data/db
+      - ./docker/mongo-init-localhost.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    command: mongod --auth --bind_ip_all
+    restart: unless-stopped
+
+volumes:
+  mongodb_data: 

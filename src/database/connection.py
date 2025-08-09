@@ -103,19 +103,36 @@ class DatabaseConnectionManager:
             for collection_name, index_specs in INDEXES.items():
                 collection = self.database[collection_name]
                 
-                # Get existing indexes
-                existing_indexes = await collection.list_indexes()
+                # Get existing indexes - convert cursor to list
+                existing_indexes_cursor = collection.list_indexes()
+                existing_indexes = await existing_indexes_cursor.to_list(length=None)
                 existing_index_names = [idx['name'] for idx in existing_indexes]
                 
                 for index_spec in index_specs:
+                    # Handle different index spec formats
                     if len(index_spec) == 2:
-                        fields, options = index_spec
-                    else:
+                        if isinstance(index_spec[1], dict):
+                            # Format: [fields, options]
+                            fields, options = index_spec
+                        else:
+                            # Format: [fields] - no options
+                            fields = index_spec[0]
+                            options = {}
+                    elif len(index_spec) == 1:
+                        # Format: [fields] - single item
                         fields = index_spec[0]
                         options = {}
+                    else:
+                        # Skip invalid index specs
+                        logger.warning(f"Skipping invalid index spec: {index_spec}")
+                        continue
                     
                     # Create index name from fields
-                    index_name = "_".join([f"{field}_{direction}" for field, direction in fields])
+                    try:
+                        index_name = "_".join([f"{field}_{direction}" for field, direction in fields])
+                    except Exception as e:
+                        logger.warning(f"Failed to create index name for {fields}: {e}")
+                        continue
                     
                     if index_name not in existing_index_names:
                         try:
@@ -205,10 +222,10 @@ class DatabaseConnectionManager:
             raise ConnectionError("Database not connected")
         
         try:
-            async with await self.client.start_session() as session:
-                async with session.start_transaction():
-                    result = await callback(session)
-                    await session.commit_transaction()
+            async with await self.client.start_session() as db_session:
+                async with db_session.start_transaction():
+                    result = await callback(db_session)
+                    await db_session.commit_transaction()
                     return result
         except Exception as e:
             logger.error(f"Transaction failed: {e}")

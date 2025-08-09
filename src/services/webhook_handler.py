@@ -15,8 +15,8 @@ from aiohttp import web, ClientSession
 from aiohttp.web import Request, Response, StreamResponse
 
 from config.settings import get_settings
-from ..database.connection import get_collection
-from ..database.models import InstagramMessage, InstagramUser, InstagramThread, SyncStatus
+from database.connection import get_collection
+from database.models import InstagramMessage, InstagramUser, InstagramThread, SyncStatus
 from .data_processor import get_data_processor
 from .sync_service import get_sync_service
 

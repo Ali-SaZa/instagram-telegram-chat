@@ -32,26 +32,26 @@ class InstagramUserOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("users")
+            collection = db.get_collection("instagram_users")
             
             # Check if user already exists
             existing_user = await collection.find_one(
-                {"instagram_user_id": user_data.instagram_user_id}
+                {"instagram_id": user_data.instagram_id}
             )
             
             if existing_user:
                 logger.info(f"User {user_data.username} already exists, updating...")
                 # Update existing user
                 result = await collection.update_one(
-                    {"instagram_user_id": user_data.instagram_user_id},
+                    {"instagram_id": user_data.instagram_id},
                     {
                         "$set": {
                             "username": user_data.username,
                             "full_name": user_data.full_name,
-                            "profile_pic_url": user_data.profile_pic_url,
+                            "profile_picture": user_data.profile_picture,
                             "is_private": user_data.is_private,
                             "is_verified": user_data.is_verified,
-                            "follower_count": user_data.follower_count,
+                            "followers_count": user_data.followers_count,
                             "following_count": user_data.following_count,
                             "updated_at": datetime.now(timezone.utc)
                         }
@@ -85,9 +85,9 @@ class InstagramUserOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("users")
+            collection = db.get_collection("instagram_users")
             
-            user_data = await collection.find_one({"instagram_user_id": instagram_user_id})
+            user_data = await collection.find_one({"instagram_id": instagram_user_id})
             
             if user_data:
                 return InstagramUser(**user_data)
@@ -110,7 +110,7 @@ class InstagramUserOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("users")
+            collection = db.get_collection("instagram_users")
             
             user_data = await collection.find_one({"username": username})
             
@@ -139,7 +139,7 @@ class InstagramMessageOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("messages")
+            collection = db.get_collection("instagram_messages")
             
             # Check if message already exists
             existing_message = await collection.find_one(
@@ -181,10 +181,10 @@ class InstagramMessageOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("messages")
+            collection = db.get_collection("instagram_messages")
             
             cursor = collection.find({"thread_id": thread_id}) \
-                .sort("timestamp", -1) \
+                .sort("created_at", -1) \
                 .skip(offset) \
                 .limit(limit)
             
@@ -217,10 +217,10 @@ class InstagramMessageOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("messages")
+            collection = db.get_collection("instagram_messages")
             
-            cursor = collection.find({"instagram_user_id": instagram_user_id}) \
-                .sort("timestamp", -1) \
+            cursor = collection.find({"sender_id": instagram_user_id}) \
+                .sort("created_at", -1) \
                 .limit(limit)
             
             messages = []
@@ -254,18 +254,18 @@ class InstagramMessageOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("messages")
+            collection = db.get_collection("instagram_messages")
             
             # Build search filter
             search_filter = {
-                "text": {"$regex": query, "$options": "i"}  # Case-insensitive search
+                "content": {"$regex": query, "$options": "i"}  # Case-insensitive search
             }
             
             if thread_id:
                 search_filter["thread_id"] = thread_id
             
             cursor = collection.find(search_filter) \
-                .sort("timestamp", -1) \
+                .sort("created_at", -1) \
                 .limit(limit)
             
             messages = []
@@ -291,7 +291,7 @@ class InstagramMessageOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("messages")
+            collection = db.get_collection("instagram_messages")
             
             message_data = await collection.find_one({"message_id": message_id})
             
@@ -316,7 +316,7 @@ class InstagramMessageOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("messages")
+            collection = db.get_collection("instagram_messages")
             
             # Check if message exists
             existing_message = await collection.find_one(
@@ -359,7 +359,7 @@ class InstagramThreadOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("threads")
+            collection = db.get_collection("instagram_threads")
             
             # Check if thread already exists
             existing_thread = await collection.find_one(
@@ -375,9 +375,9 @@ class InstagramThreadOperations:
                         "$set": {
                             "title": thread_data.title,
                             "participants": thread_data.participants,
-                            "last_message_at": thread_data.last_message_at,
+                            "last_activity": thread_data.last_activity,
                             "message_count": thread_data.message_count,
-                            "is_group_chat": thread_data.is_group_chat,
+                            "is_group": thread_data.is_group,
                             "updated_at": datetime.now(timezone.utc)
                         }
                     }
@@ -410,7 +410,7 @@ class InstagramThreadOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("threads")
+            collection = db.get_collection("instagram_threads")
             
             thread_data = await collection.find_one({"thread_id": thread_id})
             
@@ -435,10 +435,10 @@ class InstagramThreadOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("threads")
+            collection = db.get_collection("instagram_threads")
             
             cursor = collection.find({}) \
-                .sort("last_message_at", -1) \
+                .sort("last_activity", -1) \
                 .limit(limit)
             
             threads = []
@@ -465,14 +465,14 @@ class InstagramThreadOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("threads")
+            collection = db.get_collection("instagram_threads")
             
             result = await collection.update_one(
                 {"thread_id": thread_id},
                 {
                     "$set": {
                         "message_count": new_count,
-                        "updated_at": datetime.utcnow()
+                        "updated_at": datetime.now(timezone.utc)
                     }
                 }
             )
@@ -496,7 +496,7 @@ class InstagramThreadOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("threads")
+            collection = db.get_collection("instagram_threads")
             
             # Check if thread exists
             existing_thread = await collection.find_one(
@@ -545,7 +545,7 @@ class ChatSessionOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("sessions")
+            collection = db.get_collection("chat_sessions")
             
             # Check if session exists
             existing_session = await collection.find_one({
@@ -562,10 +562,9 @@ class ChatSessionOperations:
                     },
                     {
                         "$set": {
-                            "thread_id": thread_id,
-                            "last_accessed": datetime.utcnow()
-                        },
-                        "$inc": {"message_count": 1}
+                            "active_thread_id": thread_id,
+                            "last_activity": datetime.now(timezone.utc)
+                        }
                     }
                 )
                 return str(existing_session["_id"])
@@ -574,8 +573,7 @@ class ChatSessionOperations:
                 session_data = ChatSession(
                     telegram_user_id=telegram_user_id,
                     instagram_user_id=instagram_user_id,
-                    thread_id=thread_id,
-                    message_count=1
+                    active_thread_id=thread_id
                 )
                 
                 session_dict = session_data.dict(by_alias=True)
@@ -600,10 +598,10 @@ class ChatSessionOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("sessions")
+            collection = db.get_collection("chat_sessions")
             
             cursor = collection.find({"telegram_user_id": telegram_user_id}) \
-                .sort("last_accessed", -1)
+                .sort("last_activity", -1)
             
             sessions = []
             async for session_data in cursor:
@@ -635,7 +633,7 @@ class SyncStatusOperations:
             collection = db.get_collection("sync_status")
             
             sync_dict = sync_data.dict(by_alias=True)
-            sync_dict["created_at"] = datetime.utcnow()
+            sync_dict["created_at"] = datetime.now(timezone.utc)
             
             result = await collection.insert_one(sync_dict)
             logger.info(f"Created sync status: {sync_data.status}")
@@ -831,7 +829,7 @@ class InstagramOperations:
         """Get total number of threads."""
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("threads")
+            collection = db.get_collection("instagram_threads")
             return await collection.count_documents({})
         except Exception as e:
             logger.error(f"Error getting thread count: {e}")
@@ -841,7 +839,7 @@ class InstagramOperations:
         """Get total number of messages."""
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("messages")
+            collection = db.get_collection("instagram_messages")
             return await collection.count_documents({})
         except Exception as e:
             logger.error(f"Error getting message count: {e}")
