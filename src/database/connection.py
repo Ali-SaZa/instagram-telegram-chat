@@ -263,6 +263,12 @@ class DatabaseConnectionManager:
 db_manager = DatabaseConnectionManager()
 
 
+async def get_mongodb_manager():
+    """Get the database manager instance."""
+    await db_manager.ensure_connection()
+    return db_manager
+
+
 async def get_database() -> AsyncIOMotorDatabase:
     """Get the database instance."""
     await db_manager.ensure_connection()

@@ -2,10 +2,10 @@
 Database models for Instagram-Telegram chat integration.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from enum import Enum
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from bson import ObjectId
 
 
@@ -13,18 +13,14 @@ class PyObjectId(ObjectId):
     """Custom ObjectId type for Pydantic models."""
     
     @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-    
-    @classmethod
-    def validate(cls, v):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid ObjectId")
-        return ObjectId(v)
-    
-    @classmethod
-    def __modify_schema__(cls, field_schema):
+    def __get_pydantic_json_schema__(cls, field_schema):
         field_schema.update(type="string")
+        return field_schema
+    
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type, handler):
+        from pydantic_core import core_schema
+        return core_schema.json_schema(core_schema.str_schema())
 
 
 class MessageType(str, Enum):
@@ -74,14 +70,14 @@ class InstagramUser(BaseModel):
     posts_count: Optional[int] = Field(None, description="Posts count")
     biography: Optional[str] = Field(None, description="User biography")
     external_url: Optional[str] = Field(None, description="External URL")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_seen: Optional[datetime] = Field(None, description="Last seen timestamp")
     is_active: bool = Field(default=True, description="Is user active")
     
     class Config:
-        allow_population_by_field_name = True
-        schema_extra = {
+        validate_by_name = True
+        json_schema_extra = {
             "example": {
                 "instagram_id": "123456789",
                 "username": "johndoe",
@@ -96,7 +92,8 @@ class InstagramUser(BaseModel):
             }
         }
     
-    @validator('username')
+    @field_validator('username')
+    @classmethod
     def validate_username(cls, v):
         if not v or len(v.strip()) == 0:
             raise ValueError("Username cannot be empty")
@@ -106,7 +103,7 @@ class InstagramUser(BaseModel):
     
     def update_timestamp(self):
         """Update the updated_at timestamp."""
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(timezone.utc)
 
 
 class InstagramThread(BaseModel):
@@ -122,14 +119,14 @@ class InstagramThread(BaseModel):
     last_activity: Optional[datetime] = Field(None, description="Last activity timestamp")
     message_count: int = Field(default=0, description="Total message count")
     unread_count: int = Field(default=0, description="Unread message count")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_sync: Optional[datetime] = Field(None, description="Last sync timestamp")
     sync_status: SyncStatus = Field(default=SyncStatus.PENDING, description="Sync status")
     
     class Config:
-        allow_population_by_field_name = True
-        schema_extra = {
+        validate_by_name = True
+        json_schema_extra = {
             "example": {
                 "thread_id": "thread_123456",
                 "participants": ["123456789", "987654321"],
@@ -140,7 +137,8 @@ class InstagramThread(BaseModel):
             }
         }
     
-    @validator('participants')
+    @field_validator('participants')
+    @classmethod
     def validate_participants(cls, v):
         if not v or len(v) < 2:
             raise ValueError("Thread must have at least 2 participants")
@@ -148,11 +146,11 @@ class InstagramThread(BaseModel):
     
     def update_timestamp(self):
         """Update the updated_at timestamp."""
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(timezone.utc)
     
     def update_activity(self):
         """Update the last_activity timestamp."""
-        self.last_activity = datetime.utcnow()
+        self.last_activity = datetime.now(timezone.utc)
 
 
 class InstagramMessage(BaseModel):
@@ -175,13 +173,13 @@ class InstagramMessage(BaseModel):
     is_deleted: bool = Field(default=False, description="Is message deleted")
     deleted_at: Optional[datetime] = Field(None, description="Deletion timestamp")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     instagram_timestamp: Optional[datetime] = Field(None, description="Original Instagram timestamp")
     
     class Config:
-        allow_population_by_field_name = True
-        schema_extra = {
+        validate_by_name = True
+        json_schema_extra = {
             "example": {
                 "message_id": "msg_123456",
                 "thread_id": "thread_123456",
@@ -192,7 +190,8 @@ class InstagramMessage(BaseModel):
             }
         }
     
-    @validator('content')
+    @field_validator('content')
+    @classmethod
     def validate_content(cls, v):
         if not v and len(v.strip()) == 0:
             raise ValueError("Message content cannot be empty")
@@ -200,7 +199,7 @@ class InstagramMessage(BaseModel):
     
     def update_timestamp(self):
         """Update the updated_at timestamp."""
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(timezone.utc)
 
 
 class ChatSession(BaseModel):
@@ -212,14 +211,14 @@ class ChatSession(BaseModel):
     instagram_user_id: Optional[str] = Field(None, description="Linked Instagram user ID")
     active_thread_id: Optional[str] = Field(None, description="Currently active thread ID")
     is_active: bool = Field(default=True, description="Is session active")
-    last_activity: datetime = Field(default_factory=datetime.utcnow, description="Last activity timestamp")
+    last_activity: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Last activity timestamp")
     preferences: Dict[str, Any] = Field(default_factory=dict, description="User preferences")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     class Config:
-        allow_population_by_field_name = True
-        schema_extra = {
+        validate_by_name = True
+        json_schema_extra = {
             "example": {
                 "telegram_user_id": 123456789,
                 "telegram_chat_id": 123456789,
@@ -231,8 +230,8 @@ class ChatSession(BaseModel):
     
     def update_activity(self):
         """Update the last_activity timestamp."""
-        self.last_activity = datetime.utcnow()
-        self.updated_at = datetime.utcnow()
+        self.last_activity = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(timezone.utc)
 
 
 class SyncStatus(BaseModel):
@@ -251,13 +250,13 @@ class SyncStatus(BaseModel):
     error_message: Optional[str] = Field(None, description="Error message if failed")
     retry_count: int = Field(default=0, description="Retry attempt count")
     max_retries: int = Field(default=3, description="Maximum retry attempts")
-    started_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = Field(None, description="Completion timestamp")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
     
     class Config:
-        allow_population_by_field_name = True
-        schema_extra = {
+        validate_by_name = True
+        json_schema_extra = {
             "example": {
                 "operation_id": "sync_123456",
                 "operation_type": "user_sync",
@@ -270,7 +269,8 @@ class SyncStatus(BaseModel):
             }
         }
     
-    @validator('progress')
+    @field_validator('progress')
+    @classmethod
     def validate_progress(cls, v):
         if v < 0 or v > 100:
             raise ValueError("Progress must be between 0 and 100")
@@ -299,12 +299,12 @@ class UserPreference(BaseModel):
     sync_interval: int = Field(default=300, description="Sync interval in seconds")
     privacy_level: str = Field(default="standard", description="Privacy level")
     theme: str = Field(default="light", description="UI theme preference")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     class Config:
-        allow_population_by_field_name = True
-        schema_extra = {
+        validate_by_name = True
+        json_schema_extra = {
             "example": {
                 "telegram_user_id": 123456789,
                 "language": "en",
@@ -318,7 +318,7 @@ class UserPreference(BaseModel):
     
     def update_timestamp(self):
         """Update the updated_at timestamp."""
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(timezone.utc)
 
 
 # Index definitions for performance optimization

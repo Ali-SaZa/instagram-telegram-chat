@@ -305,6 +305,53 @@ class InstagramSyncService:
             
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
+    
+    async def health_check(self) -> Dict[str, Any]:
+        """
+        Check the health of the sync service.
+        
+        Returns:
+            Health status information
+        """
+        try:
+            instagram_connected = await self.instagram_client.test_connection()
+            db_connected = await self.db_ops.test_connection()
+            
+            return {
+                "status": "healthy" if (instagram_connected and db_connected) else "unhealthy",
+                "instagram_connected": instagram_connected,
+                "database_connected": db_connected,
+                "is_running": self.is_running,
+                "last_sync_time": self.last_sync_time.isoformat() if self.last_sync_time else None,
+                "sync_stats": self.sync_stats.copy()
+            }
+            
+        except Exception as e:
+            logger.error(f"Health check failed: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+    
+    async def get_sync_stats(self) -> Dict[str, Any]:
+        """
+        Get sync statistics.
+        
+        Returns:
+            Sync statistics information
+        """
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "is_running": self.is_running,
+            "last_sync_time": self.last_sync_time.isoformat() if self.last_sync_time else None,
+            "next_sync_time": (
+                (self.last_sync_time + timedelta(seconds=self.config.sync_interval)).isoformat()
+                if self.last_sync_time else None
+            ),
+            "sync_interval": self.config.sync_interval,
+            "stats": self.sync_stats.copy()
+        }
 
 
 class SyncServiceManager:

@@ -197,4 +197,113 @@ class UserSession:
         return (f"UserSession(user_id={self.user_id}, "
                 f"created_at={self.created_at}, "
                 f"last_activity={self.last_activity}, "
-                f"active={self.is_active()})") 
+                f"active={self.is_active()})")
+
+
+class TelegramSessionManager:
+    """Manages user sessions for the Telegram bot."""
+    
+    def __init__(self):
+        """Initialize the session manager."""
+        self.sessions: Dict[int, UserSession] = {}
+    
+    async def initialize(self):
+        """Initialize the session manager."""
+        # For now, just clear any existing sessions
+        self.sessions.clear()
+        logger.info("TelegramSessionManager initialized")
+    
+    async def get_or_create_session(self, user_id: int) -> UserSession:
+        """
+        Get or create a user session.
+        
+        Args:
+            user_id: Telegram user ID
+            
+        Returns:
+            UserSession: The user's session
+        """
+        if user_id not in self.sessions:
+            self.sessions[user_id] = UserSession(user_id)
+            logger.info(f"Created new session for user {user_id}")
+        else:
+            # Update activity for existing session
+            self.sessions[user_id].update_activity()
+        
+        return self.sessions[user_id]
+    
+    async def get_session(self, user_id: int) -> Optional[UserSession]:
+        """
+        Get a user session if it exists.
+        
+        Args:
+            user_id: Telegram user ID
+            
+        Returns:
+            UserSession or None if not found
+        """
+        return self.sessions.get(user_id)
+    
+    async def remove_session(self, user_id: int):
+        """
+        Remove a user session.
+        
+        Args:
+            user_id: Telegram user ID
+        """
+        if user_id in self.sessions:
+            del self.sessions[user_id]
+            logger.info(f"Removed session for user {user_id}")
+    
+    async def cleanup_inactive_sessions(self, max_inactive_hours: int = 24):
+        """
+        Clean up inactive sessions.
+        
+        Args:
+            max_inactive_hours: Maximum hours of inactivity
+        """
+        inactive_users = []
+        for user_id, session in self.sessions.items():
+            if not session.is_active(max_inactive_hours):
+                inactive_users.append(user_id)
+        
+        for user_id in inactive_users:
+            await self.remove_session(user_id)
+        
+        if inactive_users:
+            logger.info(f"Cleaned up {len(inactive_users)} inactive sessions")
+    
+    def get_active_session_count(self) -> int:
+        """Get the number of active sessions."""
+        return len([s for s in self.sessions.values() if s.is_active()])
+    
+    def get_total_session_count(self) -> int:
+        """Get the total number of sessions."""
+        return len(self.sessions)
+    
+    async def get_active_sessions(self) -> list:
+        """
+        Get all active sessions.
+        
+        Returns:
+            List of active UserSession objects
+        """
+        return [session for session in self.sessions.values() if session.is_active()]
+    
+    async def get_all_sessions(self) -> list:
+        """
+        Get all sessions.
+        
+        Returns:
+            List of all UserSession objects
+        """
+        return list(self.sessions.values())
+    
+    async def cleanup(self):
+        """Cleanup resources."""
+        try:
+            # Clear all sessions
+            self.sessions.clear()
+            logger.info("TelegramSessionManager cleanup completed")
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}") 

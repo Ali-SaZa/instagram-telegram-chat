@@ -3,7 +3,7 @@ Database operations for Instagram chat data.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 from bson import ObjectId
 
@@ -53,7 +53,7 @@ class InstagramUserOperations:
                             "is_verified": user_data.is_verified,
                             "follower_count": user_data.follower_count,
                             "following_count": user_data.following_count,
-                            "updated_at": datetime.utcnow()
+                            "updated_at": datetime.now(timezone.utc)
                         }
                     }
                 )
@@ -61,8 +61,8 @@ class InstagramUserOperations:
             else:
                 # Create new user
                 user_dict = user_data.dict(by_alias=True)
-                user_dict["created_at"] = datetime.utcnow()
-                user_dict["updated_at"] = datetime.utcnow()
+                user_dict["created_at"] = datetime.now(timezone.utc)
+                user_dict["updated_at"] = datetime.now(timezone.utc)
                 
                 result = await collection.insert_one(user_dict)
                 logger.info(f"Created new user: {user_data.username}")
@@ -152,7 +152,7 @@ class InstagramMessageOperations:
             
             # Create new message
             message_dict = message_data.dict(by_alias=True)
-            message_dict["created_at"] = datetime.utcnow()
+            message_dict["created_at"] = datetime.now(timezone.utc)
             
             result = await collection.insert_one(message_dict)
             logger.debug(f"Created new message: {message_data.message_id}")
@@ -277,6 +277,70 @@ class InstagramMessageOperations:
         except Exception as e:
             logger.error(f"Error searching messages with query '{query}': {e}")
             return []
+    
+    @staticmethod
+    async def get_message_by_id(message_id: str) -> Optional[InstagramMessage]:
+        """
+        Get message by ID.
+        
+        Args:
+            message_id: Message ID
+            
+        Returns:
+            InstagramMessage: Message data if found, None otherwise
+        """
+        try:
+            db = await get_mongodb_manager()
+            collection = db.get_collection("messages")
+            
+            message_data = await collection.find_one({"message_id": message_id})
+            
+            if message_data:
+                return InstagramMessage(**message_data)
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting message {message_id}: {e}")
+            return None
+    
+    @staticmethod
+    async def update_message(message_data: InstagramMessage) -> bool:
+        """
+        Update an existing message.
+        
+        Args:
+            message_data: Message data to update
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            db = await get_mongodb_manager()
+            collection = db.get_collection("messages")
+            
+            # Check if message exists
+            existing_message = await collection.find_one(
+                {"message_id": message_data.message_id}
+            )
+            
+            if not existing_message:
+                logger.warning(f"Message {message_data.message_id} not found for update")
+                return False
+            
+            # Update message
+            message_dict = message_data.dict(by_alias=True)
+            message_dict["updated_at"] = datetime.now(timezone.utc)
+            
+            result = await collection.update_one(
+                {"message_id": message_data.message_id},
+                {"$set": message_dict}
+            )
+            
+            return result.modified_count > 0
+            
+        except Exception as e:
+            logger.error(f"Error updating message {message_data.message_id}: {e}")
+            return False
 
 
 class InstagramThreadOperations:
@@ -314,7 +378,7 @@ class InstagramThreadOperations:
                             "last_message_at": thread_data.last_message_at,
                             "message_count": thread_data.message_count,
                             "is_group_chat": thread_data.is_group_chat,
-                            "updated_at": datetime.utcnow()
+                            "updated_at": datetime.now(timezone.utc)
                         }
                     }
                 )
@@ -322,8 +386,8 @@ class InstagramThreadOperations:
             else:
                 # Create new thread
                 thread_dict = thread_data.dict(by_alias=True)
-                thread_dict["created_at"] = datetime.utcnow()
-                thread_dict["updated_at"] = datetime.utcnow()
+                thread_dict["created_at"] = datetime.now(timezone.utc)
+                thread_dict["updated_at"] = datetime.now(timezone.utc)
                 
                 result = await collection.insert_one(thread_dict)
                 logger.info(f"Created new thread: {thread_data.title}")
@@ -417,6 +481,45 @@ class InstagramThreadOperations:
             
         except Exception as e:
             logger.error(f"Error updating thread {thread_id} message count: {e}")
+            return False
+    
+    @staticmethod
+    async def update_thread(thread_data: InstagramThread) -> bool:
+        """
+        Update an existing thread.
+        
+        Args:
+            thread_data: Thread data to update
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            db = await get_mongodb_manager()
+            collection = db.get_collection("threads")
+            
+            # Check if thread exists
+            existing_thread = await collection.find_one(
+                {"thread_id": thread_data.thread_id}
+            )
+            
+            if not existing_thread:
+                logger.warning(f"Thread {thread_data.thread_id} not found for update")
+                return False
+            
+            # Update thread
+            thread_dict = thread_data.dict(by_alias=True)
+            thread_dict["updated_at"] = datetime.now(timezone.utc)
+            
+            result = await collection.update_one(
+                {"thread_id": thread_data.thread_id},
+                {"$set": thread_dict}
+            )
+            
+            return result.modified_count > 0
+            
+        except Exception as e:
+            logger.error(f"Error updating thread {thread_data.thread_id}: {e}")
             return False
 
 
