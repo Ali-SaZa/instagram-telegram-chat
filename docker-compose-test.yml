@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # MongoDB for testing
+  mongodb-test:
+    image: mongo:6.0
+    container_name: mongodb-test
+    restart: unless-stopped
+    ports:
+      - "27018:27017"  # Different port to avoid conflicts
+    environment:
+      MONGO_INITDB_DATABASE: instagram_telegram_chat_test
+    volumes:
+      - mongodb_test_data:/data/db
+      - ./docker/mongo-init-test.js:/docker-entrypoint-initdb.d/mongo-init-test.js:ro
+    networks:
+      - test-network
+
+  # Redis for message queue testing
+  redis-test:
+    image: redis:7-alpine
+    container_name: redis-test
+    restart: unless-stopped
+    ports:
+      - "6380:6379"  # Different port to avoid conflicts
+    volumes:
+      - redis_test_data:/data
+    networks:
+      - test-network
+
+  # Application test environment
+  app-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: app-test
+    restart: unless-stopped
+    depends_on:
+      - mongodb-test
+      - redis-test
+    environment:
+      - ENVIRONMENT=testing
+      - MONGODB_URI=mongodb://mongodb-test:27017
+      - REDIS_HOST=redis-test
+      - REDIS_PORT=6379
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./sessions:/app/sessions
+    networks:
+      - test-network
+    command: ["python", "test_phase4_services.py"]
+
+volumes:
+  mongodb_test_data:
+    driver: local
+  redis_test_data:
+    driver: local
+
+networks:
+  test-network:
+    driver: bridge 

@@ -32,7 +32,7 @@ class InstagramUserOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("instagram_users")
+            collection = await db.get_collection("instagram_users")
             
             # Check if user already exists
             existing_user = await collection.find_one(
@@ -85,7 +85,7 @@ class InstagramUserOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("instagram_users")
+            collection = await db.get_collection("instagram_users")
             
             user_data = await collection.find_one({"instagram_id": instagram_user_id})
             
@@ -110,7 +110,7 @@ class InstagramUserOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("instagram_users")
+            collection = await db.get_collection("instagram_users")
             
             user_data = await collection.find_one({"username": username})
             
@@ -139,7 +139,7 @@ class InstagramMessageOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("instagram_messages")
+            collection = await db.get_collection("instagram_messages")
             
             # Check if message already exists
             existing_message = await collection.find_one(
@@ -181,7 +181,7 @@ class InstagramMessageOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("instagram_messages")
+            collection = await db.get_collection("instagram_messages")
             
             cursor = collection.find({"thread_id": thread_id}) \
                 .sort("created_at", -1) \
@@ -217,7 +217,7 @@ class InstagramMessageOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("instagram_messages")
+            collection = await db.get_collection("instagram_messages")
             
             cursor = collection.find({"sender_id": instagram_user_id}) \
                 .sort("created_at", -1) \
@@ -254,7 +254,7 @@ class InstagramMessageOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("instagram_messages")
+            collection = await db.get_collection("instagram_messages")
             
             # Build search filter
             search_filter = {
@@ -291,7 +291,7 @@ class InstagramMessageOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("instagram_messages")
+            collection = await db.get_collection("instagram_messages")
             
             message_data = await collection.find_one({"message_id": message_id})
             
@@ -316,7 +316,7 @@ class InstagramMessageOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("instagram_messages")
+            collection = await db.get_collection("instagram_messages")
             
             # Check if message exists
             existing_message = await collection.find_one(
@@ -342,6 +342,38 @@ class InstagramMessageOperations:
             logger.error(f"Error updating message {message_data.message_id}: {e}")
             return False
 
+    @staticmethod
+    async def get_messages_since(since: datetime, limit: int = 100) -> List[InstagramMessage]:
+        """
+        Get messages since a specific time.
+        
+        Args:
+            since: Start time for messages
+            limit: Maximum number of messages to return
+            
+        Returns:
+            List[InstagramMessage]: List of messages since the specified time
+        """
+        try:
+            db = await get_mongodb_manager()
+            collection = await db.get_collection("instagram_messages")
+            
+            cursor = collection.find({"created_at": {"$gte": since}}) \
+                .sort("created_at", -1) \
+                .limit(limit)
+            
+            messages = []
+            async for message_data in cursor:
+                messages.append(InstagramMessage(**message_data))
+            
+            # Return in chronological order (oldest first)
+            messages.reverse()
+            return messages
+            
+        except Exception as e:
+            logger.error(f"Error getting messages since {since}: {e}")
+            return []
+
 
 class InstagramThreadOperations:
     """Operations for Instagram threads."""
@@ -359,7 +391,7 @@ class InstagramThreadOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("instagram_threads")
+            collection = await db.get_collection("instagram_threads")
             
             # Check if thread already exists
             existing_thread = await collection.find_one(
@@ -410,7 +442,7 @@ class InstagramThreadOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("instagram_threads")
+            collection = await db.get_collection("instagram_threads")
             
             thread_data = await collection.find_one({"thread_id": thread_id})
             
@@ -435,7 +467,7 @@ class InstagramThreadOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("instagram_threads")
+            collection = await db.get_collection("instagram_threads")
             
             cursor = collection.find({}) \
                 .sort("last_activity", -1) \
@@ -465,7 +497,7 @@ class InstagramThreadOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("instagram_threads")
+            collection = await db.get_collection("instagram_threads")
             
             result = await collection.update_one(
                 {"thread_id": thread_id},
@@ -496,7 +528,7 @@ class InstagramThreadOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("instagram_threads")
+            collection = await db.get_collection("instagram_threads")
             
             # Check if thread exists
             existing_thread = await collection.find_one(
@@ -545,7 +577,7 @@ class ChatSessionOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("chat_sessions")
+            collection = await db.get_collection("chat_sessions")
             
             # Check if session exists
             existing_session = await collection.find_one({
@@ -598,7 +630,7 @@ class ChatSessionOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("chat_sessions")
+            collection = await db.get_collection("chat_sessions")
             
             cursor = collection.find({"telegram_user_id": telegram_user_id}) \
                 .sort("last_activity", -1)
@@ -630,7 +662,7 @@ class SyncStatusOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("sync_status")
+            collection = await db.get_collection("sync_status")
             
             sync_dict = sync_data.dict(by_alias=True)
             sync_dict["created_at"] = datetime.now(timezone.utc)
@@ -653,7 +685,7 @@ class SyncStatusOperations:
         """
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("sync_status")
+            collection = await db.get_collection("sync_status")
             
             sync_data = await collection.find_one(
                 {},
@@ -762,13 +794,26 @@ class InstagramOperations:
             logger.error(f"Error searching messages: {e}")
             return []
     
-    async def get_messages_since(self, since: datetime) -> List[Dict[str, Any]]:
+    async def get_messages_since(self, since: datetime, limit: int = 100) -> List[Dict[str, Any]]:
         """Get messages since a specific time."""
         try:
-            # This would need to be implemented in InstagramMessageOperations
-            # For now, return empty list
-            logger.warning("get_messages_since not yet implemented")
-            return []
+            db = await get_mongodb_manager()
+            collection = await db.get_collection("instagram_messages")
+            
+            # Build query for messages since the specified time
+            query = {"instagram_timestamp": {"$gte": since}}
+            
+            # Get messages with limit
+            cursor = collection.find(query).sort("instagram_timestamp", -1).limit(limit)
+            messages = await cursor.to_list(length=limit)
+            
+            # Convert to dict format
+            message_dicts = []
+            for msg in messages:
+                msg['_id'] = str(msg['_id'])
+                message_dicts.append(msg)
+            
+            return message_dicts
         except Exception as e:
             logger.error(f"Error getting messages since {since}: {e}")
             return []
@@ -829,7 +874,7 @@ class InstagramOperations:
         """Get total number of threads."""
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("instagram_threads")
+            collection = await db.get_collection("instagram_threads")
             return await collection.count_documents({})
         except Exception as e:
             logger.error(f"Error getting thread count: {e}")
@@ -839,7 +884,7 @@ class InstagramOperations:
         """Get total number of messages."""
         try:
             db = await get_mongodb_manager()
-            collection = db.get_collection("instagram_messages")
+            collection = await db.get_collection("instagram_messages")
             return await collection.count_documents({})
         except Exception as e:
             logger.error(f"Error getting message count: {e}")

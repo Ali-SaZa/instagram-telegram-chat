@@ -17,6 +17,9 @@ from config.settings import get_settings
 from database.connection import initialize_database, cleanup_database, db_manager
 from services.sync_service import get_sync_service
 from services.webhook_handler import get_webhook_handler, handle_webhook_request
+from services.realtime_service import get_realtime_service
+from services.message_queue import get_message_queue_service
+from services.media_handler import get_media_handler
 from telegram_bot.bot import setup_telegram_handlers
 from telegram_bot.session import TelegramSessionManager
 
@@ -44,6 +47,9 @@ class InstagramTelegramApp:
         self.telegram_session_manager: Optional[TelegramSessionManager] = None
         self.sync_service = None
         self.webhook_handler = None
+        self.realtime_service = None
+        self.message_queue_service = None
+        self.media_handler = None
         
         # Setup signal handlers for graceful shutdown
         self._setup_signal_handlers()
@@ -71,6 +77,12 @@ class InstagramTelegramApp:
             logger.info("Initializing services...")
             self.sync_service = await get_sync_service()
             self.webhook_handler = await get_webhook_handler()
+            
+            # Initialize Phase 4 services (Real-time communication)
+            logger.info("Initializing real-time services...")
+            self.message_queue_service = await get_message_queue_service()
+            self.realtime_service = await get_realtime_service()
+            self.media_handler = await get_media_handler()
             
             # Initialize Telegram session manager
             logger.info("Initializing Telegram session manager...")
@@ -144,8 +156,13 @@ class InstagramTelegramApp:
             # Check sync service health
             sync_health = await self.sync_service.health_check() if self.sync_service else {"status": "not_initialized"}
             
+            # Check Phase 4 services health
+            message_queue_health = await self.message_queue_service.health_check() if self.message_queue_service else {"status": "not_initialized"}
+            realtime_health = await self.realtime_service.health_check() if self.realtime_service else {"status": "not_initialized"}
+            media_handler_health = await self.media_handler.health_check() if self.media_handler else {"status": "not_initialized"}
+            
             overall_status = "healthy" if all(
-                h.get("status") == "healthy" for h in [db_health, webhook_health, sync_health]
+                h.get("status") == "healthy" for h in [db_health, webhook_health, sync_health, message_queue_health, realtime_health, media_handler_health]
             ) else "unhealthy"
             
             return web.json_response({
@@ -154,7 +171,10 @@ class InstagramTelegramApp:
                 "services": {
                     "database": db_health,
                     "webhook_handler": webhook_health,
-                    "sync_service": sync_health
+                    "sync_service": sync_health,
+                    "message_queue": message_queue_health,
+                    "realtime_service": realtime_health,
+                    "media_handler": media_handler_health
                 }
             })
             
@@ -177,12 +197,20 @@ class InstagramTelegramApp:
             # Get sync service status
             sync_status = await self.sync_service.get_sync_status() if self.sync_service else {}
             
+            # Get Phase 4 services status
+            message_queue_stats = await self.message_queue_service.get_queue_stats() if self.message_queue_service else {}
+            realtime_stats = await self.realtime_service.get_connection_stats() if self.realtime_service else {}
+            media_stats = await self.media_handler.get_storage_stats() if self.media_handler else {}
+            
             return web.json_response({
                 "status": "operational",
                 "timestamp": asyncio.get_event_loop().time(),
                 "database": db_info,
                 "webhook": webhook_stats,
                 "sync": sync_status,
+                "message_queue": message_queue_stats,
+                "realtime": realtime_stats,
+                "media": media_stats,
                 "telegram": {
                     "webhook_port": self.settings.telegram.webhook_port,
                     "webhook_url": self.settings.telegram.webhook_url,
@@ -206,6 +234,9 @@ class InstagramTelegramApp:
                 "database": await db_manager.get_database_info(),
                 "webhook": await self.webhook_handler.get_webhook_stats(),
                 "sync": await self.sync_service.get_sync_stats() if self.sync_service else {},
+                "message_queue": await self.message_queue_service.get_queue_stats() if self.message_queue_service else {},
+                "realtime": await self.realtime_service.get_connection_stats() if self.realtime_service else {},
+                "media": await self.media_handler.get_storage_stats() if self.media_handler else {},
                 "telegram": {
                     "active_sessions": len(await self.telegram_session_manager.get_active_sessions()) if self.telegram_session_manager else 0,
                     "total_sessions": len(await self.telegram_session_manager.get_all_sessions()) if self.telegram_session_manager else 0
@@ -256,6 +287,19 @@ class InstagramTelegramApp:
             if self.telegram_session_manager:
                 await self.telegram_session_manager.cleanup()
                 logger.info("Telegram session manager cleaned up")
+            
+            # Cleanup Phase 4 services
+            if self.media_handler:
+                await self.media_handler.cleanup()
+                logger.info("Media handler cleaned up")
+            
+            if self.realtime_service:
+                await self.realtime_service.cleanup()
+                logger.info("Real-time service cleaned up")
+            
+            if self.message_queue_service:
+                await self.message_queue_service.cleanup()
+                logger.info("Message queue service cleaned up")
             
             # Cleanup database
             await cleanup_database()

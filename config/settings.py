@@ -332,6 +332,33 @@ class Settings(BaseSettings):
     def is_testing(self) -> bool:
         """Check if running in testing environment."""
         return self.environment.lower() == "testing"
+    
+    @property
+    def redis_url(self) -> str:
+        """Get Redis connection URL."""
+        if self.redis.password:
+            return f"redis://:{self.redis.password}@{self.redis.host}:{self.redis.port}/{self.redis.database}"
+        return f"redis://{self.redis.host}:{self.redis.port}/{self.redis.database}"
+    
+    @property
+    def websocket_host(self) -> str:
+        """Get WebSocket host."""
+        return "0.0.0.0"
+    
+    @property
+    def websocket_port(self) -> int:
+        """Get WebSocket port."""
+        return 8765
+    
+    @property
+    def media_cache_path(self) -> str:
+        """Get media cache path."""
+        return str(self.data_dir / "media_cache")
+    
+    @property
+    def max_media_file_size(self) -> int:
+        """Get maximum media file size."""
+        return 100 * 1024 * 1024  # 100MB
 
 
 # Global settings instance
