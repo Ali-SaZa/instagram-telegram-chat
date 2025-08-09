@@ -154,7 +154,7 @@ class DatabaseConnectionManager:
         if not self._is_connected:
             await self.connect()
         
-        if not self.database:
+        if self.database is None:
             raise ConnectionError("Database not connected")
         
         return self.database[collection_name]
@@ -162,7 +162,13 @@ class DatabaseConnectionManager:
     async def health_check(self) -> Dict[str, Any]:
         """Perform database health check."""
         try:
-            if not self._is_connected or not self.client:
+            if not self._is_connected or self.client is None:
+                return {
+                    "status": "disconnected",
+                    "error": "Database not connected"
+                }
+            
+            if self.database is None:
                 return {
                     "status": "disconnected",
                     "error": "Database not connected"
@@ -218,7 +224,7 @@ class DatabaseConnectionManager:
         if not self._is_connected:
             await self.connect()
         
-        if not self.database:
+        if self.database is None:
             raise ConnectionError("Database not connected")
         
         try:
@@ -237,6 +243,9 @@ class DatabaseConnectionManager:
         """Get database information and statistics."""
         try:
             if not self._is_connected:
+                return {"error": "Database not connected"}
+            
+            if self.database is None:
                 return {"error": "Database not connected"}
             
             # Get database stats

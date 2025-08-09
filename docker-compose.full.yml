@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # MongoDB Service
+  mongodb:
+    image: mongo:7.0
+    container_name: instagram_telegram_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-password123}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-instagram_telegram_chat}
+    volumes:
+      - mongodb_data:/data/db
+      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - instagram_telegram_network
+
+  # MongoDB Web Interface
+  mongo-express:
+    image: mongo-express:1.0.0
+    container_name: instagram_telegram_mongo_express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME:-admin}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-password123}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME:-admin}:${MONGO_INITDB_ROOT_PASSWORD:-password123}@mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USERNAME:-admin}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:-password123}
+    depends_on:
+      - mongodb
+    networks:
+      - instagram_telegram_network
+
+  # Redis Service
+  redis:
+    image: redis:7-alpine
+    container_name: instagram_telegram_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - instagram_telegram_network
+
+  # Application Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: instagram_telegram_app
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+      - redis
+    ports:
+      - "${APP_PORT:-8000}:8000"
+      - "${TELEGRAM_WEBHOOK_PORT:-8443}:8443"
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - DEBUG=${DEBUG:-false}
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-admin}:${MONGO_INITDB_ROOT_PASSWORD:-password123}@mongodb:27017/${MONGO_INITDB_DATABASE:-instagram_telegram_chat}?authSource=admin
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - INSTAGRAM_USERNAME=${INSTAGRAM_USERNAME}
+      - INSTAGRAM_PASSWORD=${INSTAGRAM_PASSWORD}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_WEBHOOK_URL=${TELEGRAM_WEBHOOK_URL:-}
+      - TELEGRAM_WEBHOOK_PORT=${TELEGRAM_WEBHOOK_PORT:-8443}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./sessions:/app/sessions
+    networks:
+      - instagram_telegram_network
+
+volumes:
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  instagram_telegram_network:
+    driver: bridge

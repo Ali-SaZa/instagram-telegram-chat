@@ -8,13 +8,20 @@ import sys
 import os
 from pathlib import Path
 
-# Add the src directory to Python path
-src_dir = Path(__file__).parent / "src"
-sys.path.insert(0, str(src_dir))
-
 # Add the project root to Python path for config imports
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
+
+# Import MongoDB configuration fix BEFORE any other imports
+try:
+    from config.mongodb_fix import *
+    print("✅ MongoDB configuration applied at startup")
+except ImportError:
+    print("⚠️  MongoDB configuration fix not found, using default settings")
+
+# Add the src directory to Python path
+src_dir = Path(__file__).parent / "src"
+sys.path.insert(0, str(src_dir))
 
 if __name__ == "__main__":
     # Import and run the main application

@@ -5,7 +5,7 @@ Command handlers for the Telegram bot.
 import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
-from ..database.operations import InstagramOperations
+from database.operations import InstagramOperations
 
 logger = logging.getLogger(__name__)
 

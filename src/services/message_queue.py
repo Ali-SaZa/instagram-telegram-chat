@@ -7,7 +7,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Optional, Any, Callable, Awaitable
 from enum import Enum
 
 import aioredis
@@ -290,7 +290,7 @@ class MessageQueueService:
     def register_consumer(
         self,
         message_type: MessageType,
-        handler: Callable[[QueueMessage], asyncio.Awaitable[bool]]
+        handler: Callable[[QueueMessage], Awaitable[bool]]
     ):
         """Register a message consumer."""
         self.consumers[message_type] = handler
@@ -312,7 +312,7 @@ class MessageQueueService:
     async def _consumer_worker(
         self,
         message_type: MessageType,
-        handler: Callable[[QueueMessage], asyncio.Awaitable[bool]]
+        handler: Callable[[QueueMessage], Awaitable[bool]]
     ):
         """Worker task for consuming messages."""
         logger.info(f"Consumer worker started for {message_type}")

@@ -3,8 +3,7 @@ version: '3.8'
 services:
   mongodb:
     image: mongo:7.0
-    container_name: instagram_telegram_mongodb_simple
-    restart: unless-stopped
+    container_name: instagram_telegram_mongodb_custom
     ports:
       - "27018:27017"
     environment:
@@ -12,10 +11,10 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: instaSaZa1234567
       MONGO_INITDB_DATABASE: instagram_telegram_chat
     volumes:
-      - mongodb_data_simple:/data/db
-      - ./docker/mongo-init-simple.js:/docker-entrypoint-initdb.d/mongo-init-simple.js:ro
+      - mongodb_data_custom:/data/db
+      - ./docker/mongo-init-custom.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     command: mongod --auth --bind_ip_all
+    restart: unless-stopped
 
 volumes:
-  mongodb_data_simple:
-    driver: local 
+  mongodb_data_custom: 

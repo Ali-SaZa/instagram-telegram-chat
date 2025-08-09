@@ -42,7 +42,7 @@ class InstagramTelegramBot:
             await self.session_manager.initialize()
             
             # Create bot application
-            self.app = Application.builder().token(self.settings.telegram_bot_token).build()
+            self.app = Application.builder().token(self.settings.telegram.bot_token).build()
             
             # Add handlers
             self._setup_handlers()

@@ -1,11 +1,11 @@
 """
-Configuration settings for Instagram-Telegram chat integration.
+Application configuration and settings management.
 """
 
 import os
 from pathlib import Path
-from typing import Optional
-from pydantic import Field
+from typing import Optional, List
+from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings
 
 # Load environment variables from .env file
@@ -18,31 +18,31 @@ class DatabaseSettings(BaseSettings):
     
     mongodb_uri: str = Field(
         default="mongodb://localhost:27017",
-        env="MONGODB_URI",
+        alias="MONGODB_URI",
         description="MongoDB connection URI"
     )
     
     mongodb_database: str = Field(
         default="instagram_telegram_chat",
-        env="MONGODB_DATABASE",
+        alias="MONGODB_DATABASE",
         description="MongoDB database name"
     )
     
     mongodb_max_pool_size: int = Field(
         default=10,
-        env="MONGODB_MAX_POOL_SIZE",
+        alias="MONGODB_MAX_POOL_SIZE",
         description="MongoDB connection pool size"
     )
     
     mongodb_min_pool_size: int = Field(
         default=1,
-        env="MONGODB_MIN_POOL_SIZE",
+        alias="MONGODB_MIN_POOL_SIZE",
         description="MongoDB minimum connection pool size"
     )
     
     mongodb_max_idle_time: int = Field(
         default=30000,
-        env="MONGODB_MAX_IDLE_TIME",
+        alias="MONGODB_MAX_IDLE_TIME",
         description="MongoDB max idle time in milliseconds"
     )
 
@@ -52,49 +52,49 @@ class InstagramSettings(BaseSettings):
     
     instagram_username: str = Field(
         default="",
-        env="INSTAGRAM_USERNAME",
+        alias="INSTAGRAM_USERNAME",
         description="Instagram username"
     )
     
     instagram_password: str = Field(
         default="",
-        env="INSTAGRAM_PASSWORD",
+        alias="INSTAGRAM_PASSWORD",
         description="Instagram password"
     )
     
     instagram_session_file: str = Field(
         default="instagram_session.json",
-        env="INSTAGRAM_SESSION_FILE",
+        alias="INSTAGRAM_SESSION_FILE",
         description="Instagram session file path"
     )
     
     instagram_sync_interval: int = Field(
         default=300,
-        env="INSTAGRAM_SYNC_INTERVAL",
+        alias="INSTAGRAM_SYNC_INTERVAL",
         description="Instagram sync interval in seconds"
     )
     
     instagram_max_retries: int = Field(
         default=3,
-        env="INSTAGRAM_MAX_RETRIES",
+        alias="INSTAGRAM_MAX_RETRIES",
         description="Maximum retry attempts for Instagram operations"
     )
     
     instagram_retry_delay: int = Field(
         default=60,
-        env="INSTAGRAM_RETRY_DELAY",
+        alias="INSTAGRAM_RETRY_DELAY",
         description="Retry delay in seconds"
     )
     
     instagram_batch_size: int = Field(
         default=50,
-        env="INSTAGRAM_BATCH_SIZE",
+        alias="INSTAGRAM_BATCH_SIZE",
         description="Batch size for Instagram operations"
     )
     
     instagram_enable_realtime: bool = Field(
         default=True,
-        env="INSTAGRAM_ENABLE_REALTIME",
+        alias="INSTAGRAM_ENABLE_REALTIME",
         description="Enable real-time Instagram updates"
     )
 
@@ -102,45 +102,45 @@ class InstagramSettings(BaseSettings):
 class TelegramSettings(BaseSettings):
     """Telegram bot settings."""
     
-    telegram_bot_token: str = Field(
+    bot_token: str = Field(
         default="",
-        env="TELEGRAM_BOT_TOKEN",
+        alias="TELEGRAM_BOT_TOKEN",
         description="Telegram bot token"
     )
     
-    telegram_webhook_url: Optional[str] = Field(
+    webhook_url: Optional[str] = Field(
         default=None,
-        env="TELEGRAM_WEBHOOK_URL",
+        alias="TELEGRAM_WEBHOOK_URL",
         description="Telegram webhook URL"
     )
     
-    telegram_webhook_port: int = Field(
+    webhook_port: int = Field(
         default=8443,
-        env="TELEGRAM_WEBHOOK_PORT",
+        alias="TELEGRAM_WEBHOOK_PORT",
         description="Telegram webhook port"
     )
     
-    telegram_webhook_cert: Optional[str] = Field(
+    webhook_cert: Optional[str] = Field(
         default=None,
-        env="TELEGRAM_WEBHOOK_CERT",
+        alias="TELEGRAM_WEBHOOK_CERT",
         description="Telegram webhook certificate path"
     )
     
-    telegram_webhook_key: Optional[str] = Field(
+    webhook_key: Optional[str] = Field(
         default=None,
-        env="TELEGRAM_WEBHOOK_KEY",
+        alias="TELEGRAM_WEBHOOK_KEY",
         description="Telegram webhook private key path"
     )
     
-    telegram_polling_timeout: int = Field(
+    polling_timeout: int = Field(
         default=30,
-        env="TELEGRAM_POLLING_TIMEOUT",
+        alias="TELEGRAM_POLLING_TIMEOUT",
         description="Telegram polling timeout in seconds"
     )
     
-    telegram_max_connections: int = Field(
+    max_connections: int = Field(
         default=100,
-        env="TELEGRAM_MAX_CONNECTIONS",
+        alias="TELEGRAM_MAX_CONNECTIONS",
         description="Maximum Telegram connections"
     )
 
@@ -150,31 +150,31 @@ class RedisSettings(BaseSettings):
     
     redis_host: str = Field(
         default="localhost",
-        env="REDIS_HOST",
+        alias="REDIS_HOST",
         description="Redis host"
     )
     
     redis_port: int = Field(
         default=6379,
-        env="REDIS_PORT",
+        alias="REDIS_PORT",
         description="Redis port"
     )
     
     redis_password: Optional[str] = Field(
         default=None,
-        env="REDIS_PASSWORD",
+        alias="REDIS_PASSWORD",
         description="Redis password"
     )
     
     redis_database: int = Field(
         default=0,
-        env="REDIS_DATABASE",
+        alias="REDIS_DATABASE",
         description="Redis database number"
     )
     
     redis_max_connections: int = Field(
         default=10,
-        env="REDIS_MAX_CONNECTIONS",
+        alias="REDIS_MAX_CONNECTIONS",
         description="Redis max connections"
     )
 
@@ -184,31 +184,31 @@ class LoggingSettings(BaseSettings):
     
     log_level: str = Field(
         default="INFO",
-        env="LOG_LEVEL",
+        alias="LOG_LEVEL",
         description="Logging level"
     )
     
     log_format: str = Field(
         default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        env="LOG_FORMAT",
+        alias="LOG_FORMAT",
         description="Log format string"
     )
     
     log_file: Optional[str] = Field(
         default=None,
-        env="LOG_FILE",
+        alias="LOG_FILE",
         description="Log file path"
     )
     
     log_max_size: int = Field(
         default=10485760,  # 10MB
-        env="LOG_MAX_SIZE",
+        alias="LOG_MAX_SIZE",
         description="Maximum log file size in bytes"
     )
     
     log_backup_count: int = Field(
         default=5,
-        env="LOG_BACKUP_COUNT",
+        alias="LOG_BACKUP_COUNT",
         description="Number of log backup files"
     )
 
@@ -218,25 +218,25 @@ class SecuritySettings(BaseSettings):
     
     encryption_key: Optional[str] = Field(
         default=None,
-        env="ENCRYPTION_KEY",
+        alias="ENCRYPTION_KEY",
         description="Encryption key for sensitive data"
     )
     
     enable_encryption: bool = Field(
         default=True,
-        env="ENABLE_ENCRYPTION",
+        alias="ENABLE_ENCRYPTION",
         description="Enable data encryption"
     )
     
     api_rate_limit: int = Field(
         default=100,
-        env="API_RATE_LIMIT",
+        alias="API_RATE_LIMIT",
         description="API rate limit per minute"
     )
     
     session_timeout: int = Field(
         default=3600,
-        env="SESSION_TIMEOUT",
+        alias="SESSION_TIMEOUT",
         description="Session timeout in seconds"
     )
 
@@ -247,13 +247,13 @@ class Settings(BaseSettings):
     # Environment
     environment: str = Field(
         default="development",
-        env="ENVIRONMENT",
+        alias="ENVIRONMENT",
         description="Application environment"
     )
     
     debug: bool = Field(
         default=False,
-        env="DEBUG",
+        alias="DEBUG",
         description="Enable debug mode"
     )
     
@@ -263,30 +263,22 @@ class Settings(BaseSettings):
     logs_dir: Path = base_dir / "logs"
     sessions_dir: Path = base_dir / "sessions"
     
-    # Component settings
-    database: DatabaseSettings = DatabaseSettings()
-    instagram: InstagramSettings = InstagramSettings()
-    telegram: TelegramSettings = TelegramSettings()
-    redis: RedisSettings = RedisSettings()
-    logging: LoggingSettings = LoggingSettings()
-    security: SecuritySettings = SecuritySettings()
-    
     # Feature flags
     enable_webhooks: bool = Field(
         default=True,
-        env="ENABLE_WEBHOOKS",
+        alias="ENABLE_WEBHOOKS",
         description="Enable webhook support"
     )
     
     enable_sync_service: bool = Field(
         default=True,
-        env="ENABLE_SYNC_SERVICE",
+        alias="ENABLE_SYNC_SERVICE",
         description="Enable Instagram sync service"
     )
     
     enable_telegram_bot: bool = Field(
         default=True,
-        env="ENABLE_TELEGRAM_BOT",
+        alias="ENABLE_TELEGRAM_BOT",
         description="Enable Telegram bot"
     )
     
@@ -298,13 +290,14 @@ class Settings(BaseSettings):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # Re-initialize nested settings with the current environment context
-        self.database = DatabaseSettings()
-        self.instagram = InstagramSettings()
-        self.telegram = TelegramSettings()
-        self.redis = RedisSettings()
-        self.logging = LoggingSettings()
-        self.security = SecuritySettings()
+        # Initialize nested settings after the parent is initialized
+        # This ensures environment variables are loaded first
+        self._database = None
+        self._instagram = None
+        self._telegram = None
+        self._redis = None
+        self._logging = None
+        self._security = None
         self._create_directories()
     
     def _create_directories(self):
@@ -317,6 +310,42 @@ class Settings(BaseSettings):
         
         for directory in directories:
             directory.mkdir(parents=True, exist_ok=True)
+    
+    @property
+    def database(self) -> DatabaseSettings:
+        if self._database is None:
+            self._database = DatabaseSettings()
+        return self._database
+    
+    @property
+    def instagram(self) -> InstagramSettings:
+        if self._instagram is None:
+            self._instagram = InstagramSettings()
+        return self._instagram
+    
+    @property
+    def telegram(self) -> TelegramSettings:
+        if self._telegram is None:
+            self._telegram = TelegramSettings()
+        return self._telegram
+    
+    @property
+    def redis(self) -> RedisSettings:
+        if self._redis is None:
+            self._redis = RedisSettings()
+        return self._redis
+    
+    @property
+    def logging(self) -> LoggingSettings:
+        if self._logging is None:
+            self._logging = LoggingSettings()
+        return self._logging
+    
+    @property
+    def security(self) -> SecuritySettings:
+        if self._security is None:
+            self._security = SecuritySettings()
+        return self._security
     
     @property
     def is_production(self) -> bool:
@@ -336,9 +365,9 @@ class Settings(BaseSettings):
     @property
     def redis_url(self) -> str:
         """Get Redis connection URL."""
-        if self.redis.password:
-            return f"redis://:{self.redis.password}@{self.redis.host}:{self.redis.port}/{self.redis.database}"
-        return f"redis://{self.redis.host}:{self.redis.port}/{self.redis.database}"
+        if self.redis.redis_password:
+            return f"redis://:{self.redis.redis_password}@{self.redis.redis_host}:{self.redis.redis_port}/{self.redis.redis_database}"
+        return f"redis://{self.redis.redis_host}:{self.redis.redis_port}/{self.redis.redis_database}"
     
     @property
     def websocket_host(self) -> str:

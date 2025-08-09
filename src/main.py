@@ -114,7 +114,7 @@ class InstagramTelegramApp:
         self.app.router.add_get('/stats', self._stats_handler)
         
         # Add middleware for logging
-        self.app.middlewares.append(self._logging_middleware)
+        self.app.middlewares.append(self._create_logging_middleware())
         
         # Create runner and site
         self.runner = AppRunner(self.app)
@@ -130,19 +130,25 @@ class InstagramTelegramApp:
         
         logger.info(f"Web application started on port {self.settings.telegram.webhook_port}")
     
-    async def _logging_middleware(self, request, handler):
-        """Middleware for logging HTTP requests."""
-        start_time = asyncio.get_event_loop().time()
+    def _create_logging_middleware(self):
+        """Create logging middleware function."""
+        async def logging_middleware(app, handler):
+            async def middleware_handler(request):
+                start_time = asyncio.get_event_loop().time()
+                
+                try:
+                    response = await handler(request)
+                    duration = (asyncio.get_event_loop().time() - start_time) * 1000
+                    logger.info(f"{request.method} {request.path} - {response.status} - {duration:.2f}ms")
+                    return response
+                except Exception as e:
+                    duration = (asyncio.get_event_loop().time() - start_time) * 1000
+                    logger.error(f"{request.method} {request.path} - ERROR - {duration:.2f}ms - {e}")
+                    raise
+            
+            return middleware_handler
         
-        try:
-            response = await handler(request)
-            duration = (asyncio.get_event_loop().time() - start_time) * 1000
-            logger.info(f"{request.method} {request.path} - {response.status} - {duration:.2f}ms")
-            return response
-        except Exception as e:
-            duration = (asyncio.get_event_loop().time() - start_time) * 1000
-            logger.error(f"{request.method} {request.path} - ERROR - {duration:.2f}ms - {e}")
-            raise
+        return logging_middleware
     
     async def _health_check_handler(self, request):
         """Health check endpoint."""
@@ -154,7 +160,18 @@ class InstagramTelegramApp:
             webhook_health = await self.webhook_handler.health_check()
             
             # Check sync service health
-            sync_health = await self.sync_service.health_check() if self.sync_service else {"status": "not_initialized"}
+            if self.sync_service:
+                try:
+                    # Get status of all sync services
+                    sync_statuses = await self.sync_service.get_all_status()
+                    sync_health = {
+                        "status": "healthy" if sync_statuses else "not_initialized",
+                        "services": sync_statuses
+                    }
+                except Exception as e:
+                    sync_health = {"status": "unhealthy", "error": str(e)}
+            else:
+                sync_health = {"status": "not_initialized"}
             
             # Check Phase 4 services health
             message_queue_health = await self.message_queue_service.health_check() if self.message_queue_service else {"status": "not_initialized"}
@@ -195,7 +212,7 @@ class InstagramTelegramApp:
             webhook_stats = await self.webhook_handler.get_webhook_stats()
             
             # Get sync service status
-            sync_status = await self.sync_service.get_sync_status() if self.sync_service else {}
+            sync_status = await self.sync_service.get_all_status() if self.sync_service else {}
             
             # Get Phase 4 services status
             message_queue_stats = await self.message_queue_service.get_queue_stats() if self.message_queue_service else {}
@@ -233,7 +250,7 @@ class InstagramTelegramApp:
                 "timestamp": asyncio.get_event_loop().time(),
                 "database": await db_manager.get_database_info(),
                 "webhook": await self.webhook_handler.get_webhook_stats(),
-                "sync": await self.sync_service.get_sync_stats() if self.sync_service else {},
+                "sync": await self.sync_service.get_all_status() if self.sync_service else {},
                 "message_queue": await self.message_queue_service.get_queue_stats() if self.message_queue_service else {},
                 "realtime": await self.realtime_service.get_connection_stats() if self.realtime_service else {},
                 "media": await self.media_handler.get_storage_stats() if self.media_handler else {},
